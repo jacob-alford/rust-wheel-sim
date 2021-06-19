@@ -10,6 +10,12 @@ import * as P from './Probability'
 import * as Fr from './Fraction'
 
 /**
+ * @category internal
+ */
+const eqFraction: (x: Fr.Fraction) => (y: Fr.Fraction) => boolean = (x) => (y) =>
+  Fr.Ord.equals(x, y)
+
+/**
  * @category model
  */
 export interface DiscreteDistribution<A>
@@ -20,25 +26,19 @@ export interface DiscreteDistribution<A>
  */
 export const fromArray: <A>(
   arr: ReadonlyArray<P.Probability<A>>
-) => O.Option<DiscreteDistribution<A>> = (ps) =>
-  pipe(
-    ps,
-    O.fromPredicate(
-      flow(RA.foldMap(Fr.MonoidSum)(P.toFraction), (sum) =>
-        Fr.Ord.equals(sum, Fr.Field.one)
-      )
-    ),
-    O.chain(RNEA.fromReadonlyArray),
-    O.chain((ps) =>
-      pipe(
-        ps,
-        O.fromPredicate(
-          RNEA.foldMap(B.MonoidAll)(({ p }) => p.bottom === RNEA.head(ps).p.bottom)
-        ),
-        O.map(() => ps)
-      )
+) => O.Option<DiscreteDistribution<A>> = flow(
+  O.fromPredicate(flow(RA.foldMap(Fr.MonoidSum)(P.toFraction), eqFraction(Fr.Field.one))),
+  O.chain(RNEA.fromReadonlyArray),
+  O.chain((ps) =>
+    pipe(
+      ps,
+      O.fromPredicate(
+        RNEA.foldMap(B.MonoidAll)(({ p }) => p.bottom === RNEA.head(ps).p.bottom)
+      ),
+      O.map(() => ps)
     )
   )
+)
 
 /**
  * @category utility
