@@ -12,7 +12,7 @@ import * as Fr from './Fraction'
 /**
  * @category model
  */
-export interface WheelDistribution<A>
+export interface DiscreteDistribution<A>
   extends RNEA.ReadonlyNonEmptyArray<P.Probability<A>> {}
 
 /**
@@ -20,11 +20,11 @@ export interface WheelDistribution<A>
  */
 export const fromArray: <A>(
   arr: ReadonlyArray<P.Probability<A>>
-) => O.Option<WheelDistribution<A>> = (ps) =>
+) => O.Option<DiscreteDistribution<A>> = (ps) =>
   pipe(
     ps,
     O.fromPredicate(
-      flow(RA.foldMap(Fr.sumMonoid)(P.toFraction), (sum) =>
+      flow(RA.foldMap(Fr.MonoidSum)(P.toFraction), (sum) =>
         Fr.Ord.equals(sum, Fr.Field.one)
       )
     ),
@@ -43,7 +43,7 @@ export const fromArray: <A>(
 /**
  * @category utility
  */
-export const fold: <A>(ps: WheelDistribution<A>) => IO.IO<A> = flow(
+export const fold: <A>(ps: DiscreteDistribution<A>) => IO.IO<A> = flow(
   RNEA.chain(({ p, value }) =>
     RNEA.concat(
       RA.makeBy(p.top - 1, () => value),

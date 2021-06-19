@@ -8,14 +8,14 @@ import * as F from './Fraction'
 /**
  * @category model
  */
-export type Strategy<Keys extends string> = Readonly<Record<Keys, Bet<Keys>>>
+export type Strategy<Keys extends string> = RR.ReadonlyRecord<Keys, Bet<Keys>>
 
 /**
  * @category utilities
  */
 export const calculateGains: <Keys extends string>(
   strategy: Strategy<Keys>
-) => (total: number) => (key: Keys) => number = (strategy) => (total) => (key) =>
+) => (total: number, key: Keys) => number = (strategy) => (total, key) =>
   pipe(
     strategy,
     RR.filter((bet) => bet.p.value !== key),
@@ -27,7 +27,7 @@ export const calculateGains: <Keys extends string>(
 /**
  * @category utilities
  */
-export const prioriStatistics: (
+export const getPrioriStatistics: (
   turns: number
 ) => <Keys extends string>(strategy: Strategy<Keys>) => [number, number] =
   (turns) => (strategy) => {

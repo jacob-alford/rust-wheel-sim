@@ -46,7 +46,7 @@ export const Field: Fld.Field<Fraction> = {
 /**
  * @category instances
  */
-export const sumMonoid: Mn.Monoid<Fraction> = {
+export const MonoidSum: Mn.Monoid<Fraction> = {
   concat: Field.add,
   empty: Field.zero
 }
