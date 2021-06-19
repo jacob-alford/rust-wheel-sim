@@ -1,6 +1,6 @@
 # Rust Wheel Sim
 
-Simulates the Rust roulette wheel
+Simulates the Rust roulette wheel with priori statistics
 
 ![Rust Wheel](assets/rust-wheel.jpeg)
 
