@@ -43,7 +43,7 @@ export const fromArray: <A>(
 /**
  * @category utility
  */
-export const foldNumberIO: <A>(ps: WheelDistribution<A>) => IO.IO<A> = flow(
+export const fold: <A>(ps: WheelDistribution<A>) => IO.IO<A> = flow(
   RNEA.chain(({ p, value }) =>
     RNEA.concat(
       RA.makeBy(p.top - 1, () => value),
