@@ -1,6 +1,8 @@
 import { Semigroup } from 'fp-ts/Semigroup'
 import * as RR from 'fp-ts/ReadonlyRecord'
 import * as IO from 'fp-ts/IO'
+import * as Ord_ from 'fp-ts/Ord'
+import * as N from 'fp-ts/number'
 import { constant, Endomorphism, pipe } from 'fp-ts/function'
 
 import * as Bet from 'Bet'
@@ -75,3 +77,13 @@ export const getSemigroup: <Keys extends string>(
     return pipe(newStrategy, fromStrategy(calculateFitness))
   }
 })
+
+/**
+ * @category instances
+ */
+export const getOrd: <Keys extends string>() => Ord_.Ord<Individual<Keys>> = () =>
+  pipe(
+    N.Ord,
+    Ord_.reverse,
+    Ord_.contramap(({ fitness }) => fitness)
+  )
