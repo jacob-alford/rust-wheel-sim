@@ -1,5 +1,5 @@
 import * as O from 'fp-ts/Option'
-import { pipe } from 'fp-ts/function'
+import { Endomorphism, pipe } from 'fp-ts/function'
 
 import * as P from './Probability'
 import * as F from './Fraction'
@@ -32,3 +32,14 @@ export const bet: <A>(
  * @category destructors
  */
 export const toProbability: <A>(a: Bet<A>) => P.Probability<A> = ({ p }) => p
+
+/**
+ * @category utilities
+ */
+export const mapStake: <A>(f: Endomorphism<number>) => Endomorphism<Bet<A>> =
+  (f) =>
+  ({ p, payout, stake: s0 }) => ({
+    p,
+    payout,
+    stake: f(s0)
+  })

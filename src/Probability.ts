@@ -1,5 +1,10 @@
 import * as O from 'fp-ts/Option'
-import { pipe } from 'fp-ts/function'
+import { constant, constTrue, constFalse, flow, pipe } from 'fp-ts/function'
+import * as RA from 'fp-ts/ReadonlyArray'
+import * as R from 'fp-ts/Random'
+import * as IO from 'fp-ts/IO'
+import * as RNEA from 'fp-ts/ReadonlyNonEmptyArray'
+
 import * as Fr from './Fraction'
 
 /**
@@ -37,10 +42,36 @@ export const fromFraction: <A>(
     pipe(
       probability(top)(bottom)(value),
       O.fromPredicate(() => top <= bottom),
-      O.chain(O.fromPredicate(() => isInteger(top) && isInteger(bottom)))
+      O.chain(O.fromPredicate(() => isInteger(top) && isInteger(bottom))),
+      O.chain(O.fromPredicate(() => bottom !== 0))
     )
 
 /**
  * @category destructors
  */
 export const toFraction: <A>(p: Probability<A>) => Fr.Fraction = ({ p }) => p
+
+/**
+ * @category destructors
+ */
+export const fold: <A>(p: Probability<A>) => IO.IO<O.Option<A>> = ({
+  p: { top, bottom },
+  value
+}) =>
+  pipe(
+    RA.getMonoid<boolean>().concat(
+      RA.makeBy(top, constTrue),
+      RA.makeBy(bottom - top, constFalse)
+    ),
+    RNEA.fromReadonlyArray,
+    O.fold(constant(constFalse), R.randomElem),
+    IO.map((selected) => pipe(value, O.fromPredicate(constant(selected))))
+  )
+
+/**
+ * @category destructors
+ */
+export const foldBoolean: <A>(p: Probability<A>) => IO.IO<boolean> = flow(
+  fold,
+  IO.map(O.isSome)
+)

@@ -1,14 +1,14 @@
 import * as RR from 'fp-ts/ReadonlyRecord'
 import * as N from 'fp-ts/number'
-import { pipe } from 'fp-ts/function'
+import { Endomorphism, pipe } from 'fp-ts/function'
 
-import { Bet } from './Bet'
+import * as Bet from './Bet'
 import * as F from './Fraction'
 
 /**
  * @category model
  */
-export type Strategy<Keys extends string> = RR.ReadonlyRecord<Keys, Bet<Keys>>
+export type Strategy<Keys extends string> = RR.ReadonlyRecord<Keys, Bet.Bet<Keys>>
 
 /**
  * @category utilities
@@ -56,3 +56,14 @@ export const getPrioriStatistics: (
     const n2 = Math.pow(turns, 2)
     return [n * Exp_x_, n2 * (Exp_x2_ - Exp_x_2)]
   }
+
+/**
+ * @category utilities
+ */
+export const mapStakes: <Keys extends string>(
+  f: RR.ReadonlyRecord<Keys, Endomorphism<number>>
+) => Endomorphism<Strategy<Keys>> = (fS) => (strategy) =>
+  pipe(
+    fS,
+    RR.mapWithIndex((key, f) => pipe(strategy[key], Bet.mapStake(f)))
+  )
