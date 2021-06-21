@@ -3,7 +3,10 @@ import * as RR from 'fp-ts/ReadonlyRecord'
 import * as IO from 'fp-ts/IO'
 import * as Ord_ from 'fp-ts/Ord'
 import * as N from 'fp-ts/number'
-import { constant, Endomorphism, pipe } from 'fp-ts/function'
+import * as R from 'fp-ts/Random'
+import * as O from 'fp-ts/Option'
+import { fst } from 'fp-ts/Tuple'
+import { constant, Endomorphism, flow, pipe } from 'fp-ts/function'
 
 import * as Bet from 'Bet'
 import * as S from 'Strategy'
@@ -21,11 +24,25 @@ export interface Individual<Keys extends string> {
  * @category constructors
  */
 export const fromStrategy: <Keys extends string>(
-  calculateFitness: (s: S.Strategy<Keys>) => number
-) => (s: S.Strategy<Keys>) => Individual<Keys> = (calculateFitness) => (s) => ({
+  s: S.Strategy<Keys>
+) => Individual<Keys> = (s) => ({
   entity: s,
-  fitness: calculateFitness(s)
+  fitness: pipe(s, S.getPrioriStatistics(1), fst)
 })
+
+/**
+ * @category constructors
+ */
+export const initializeIndividual: (
+  stakeBounds: [number, number]
+) => <Keys extends string>(
+  cons: RR.ReadonlyRecord<Keys, (stake: number) => O.Option<Bet.Bet<Keys>>>
+) => O.Option<Individual<Keys>> = ([stakeLow, stakeHigh]) =>
+  flow(
+    RR.map((makeBet) => pipe(R.randomInt(stakeLow, stakeHigh), IO.map(makeBet))()),
+    RR.sequence(O.Applicative),
+    O.map(fromStrategy)
+  )
 
 /**
  * @category internal
@@ -44,14 +61,8 @@ const randomMutation: (
 export const getSemigroup: <Keys extends string>(
   keys: RR.ReadonlyRecord<Keys, Keys>,
   oddsOfMutation: P.Probability<number>,
-  scaleFactor: IO.IO<number>,
-  calculateFitness: (s: S.Strategy<Keys>) => number
-) => Semigroup<Individual<Keys>> = (
-  keys,
-  oddsOfMutation,
-  scaleFactor,
-  calculateFitness
-) => ({
+  scaleFactor: IO.IO<number>
+) => Semigroup<Individual<Keys>> = (keys, oddsOfMutation, scaleFactor) => ({
   concat: (x, y) => {
     const stakeRatio = x.fitness / y.fitness
     const stakeRatioI = 1 - stakeRatio
@@ -74,7 +85,7 @@ export const getSemigroup: <Keys extends string>(
         )
       })
     )
-    return pipe(newStrategy, fromStrategy(calculateFitness))
+    return fromStrategy(newStrategy)
   }
 })
 
