@@ -11,6 +11,7 @@
     "typescript": "^4.3.4"
   },
   "scripts": {
-    "start": "ts-node -P ./tsconfig.json -r tsconfig-paths/register index.ts"
+    "start": "ts-node -P ./tsconfig.json -r tsconfig-paths/register index.ts",
+    "rustSim": "ts-node -P ./tsconfig.json -r tsconfig-paths/register rust-sim.ts"
   }
 }

@@ -48,7 +48,7 @@ export const initializeIndividual: (
  * @category internal
  */
 const randomMutation: (
-  odds: P.Probability<number>,
+  odds: P.Probability<unknown>,
   scaleFactor: number
 ) => Endomorphism<number> = (odds, scaleFactor) => (value) =>
   pipe(odds, P.foldBoolean, (shouldMutate) =>
@@ -60,7 +60,7 @@ const randomMutation: (
  */
 export const getSemigroup: <Keys extends string>(
   keys: RR.ReadonlyRecord<Keys, Keys>,
-  oddsOfMutation: P.Probability<number>,
+  oddsOfMutation: P.Probability<unknown>,
   scaleFactor: IO.IO<number>
 ) => Semigroup<Individual<Keys>> = (keys, oddsOfMutation, scaleFactor) => ({
   concat: (x, y) => {
@@ -95,6 +95,5 @@ export const getSemigroup: <Keys extends string>(
 export const getOrd: <Keys extends string>() => Ord_.Ord<Individual<Keys>> = () =>
   pipe(
     N.Ord,
-    Ord_.reverse,
     Ord_.contramap(({ fitness }) => fitness)
   )

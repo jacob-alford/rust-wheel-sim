@@ -33,7 +33,7 @@ export const makeGeneration: (
 export const getNaturalSelection = <Keys extends string>(
   casualties: number
 ): Endomorphism<Population<Keys>> =>
-  flow(RA.sort(I.getOrd<Keys>()), RA.takeLeft(casualties))
+  flow(RA.sort(I.getOrd<Keys>()), RA.takeRight(casualties))
 
 /**
  * @category internal

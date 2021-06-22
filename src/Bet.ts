@@ -1,4 +1,5 @@
 import * as O from 'fp-ts/Option'
+import * as Sh from 'fp-ts/Show'
 import { Endomorphism, pipe } from 'fp-ts/function'
 
 import * as P from './Probability'
@@ -43,3 +44,10 @@ export const mapStake: <A>(f: Endomorphism<number>) => Endomorphism<Bet<A>> =
     payout,
     stake: f(s0)
   })
+
+/**
+ * @category instances
+ */
+export const getShow: <Keys extends string>() => Sh.Show<Bet<Keys>> = () => ({
+  show: ({ stake }) => String(stake)
+})

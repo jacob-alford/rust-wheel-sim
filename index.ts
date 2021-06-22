@@ -1,22 +1,16 @@
-import * as IOE from 'fp-ts/IOEither'
 import * as RA from 'fp-ts/ReadonlyArray'
 import * as RR from 'fp-ts/ReadonlyRecord'
+import * as IOE from 'fp-ts/IOEither'
+import * as IO from 'fp-ts/IO'
+import * as RNEA from 'fp-ts/ReadonlyNonEmptyArray'
 import * as O from 'fp-ts/Option'
-import * as T from 'fp-ts/ReadonlyTuple'
-import { pipe, flow } from 'fp-ts/function'
+import { flow, identity, pipe } from 'fp-ts/function'
 
 import * as Bet from './src/Bet'
-import * as S from './src/Strategy'
-import * as DD from './src/DiscreteDistribution'
-
-const STARTING_TOTAL = 1000
-const NUMBER_OF_SPINS = 35
-
-const BET_ON_ONE = 69
-const BET_ON_THREE = 0
-const BET_ON_FIVE = 0
-const BET_ON_TEN = 0
-const BET_ON_TWENTY = 0
+import * as Pop from './src/Population'
+import * as P from './src/Probability'
+import * as Fr from './src/Fraction'
+import * as I from './src/Individual'
 
 enum WheelNumbers {
   One = '1',
@@ -26,60 +20,77 @@ enum WheelNumbers {
   Twenty = '20'
 }
 
-const strategy = pipe(
-  {
-    [WheelNumbers.One]: Bet.bet(WheelNumbers.One, 2, 12, 25)(BET_ON_ONE),
-    [WheelNumbers.Three]: Bet.bet(WheelNumbers.Three, 4, 6, 25)(BET_ON_THREE),
-    [WheelNumbers.Five]: Bet.bet(WheelNumbers.Five, 6, 4, 25)(BET_ON_FIVE),
-    [WheelNumbers.Ten]: Bet.bet(WheelNumbers.Ten, 12, 2, 25)(BET_ON_TEN),
-    [WheelNumbers.Twenty]: Bet.bet(WheelNumbers.Twenty, 25, 1, 25)(BET_ON_TWENTY)
-  },
-  RR.sequence(O.Applicative)
-)
+const wheelNumbers: RR.ReadonlyRecord<WheelNumbers, WheelNumbers> = {
+  [WheelNumbers.One]: WheelNumbers.One,
+  [WheelNumbers.Three]: WheelNumbers.Three,
+  [WheelNumbers.Five]: WheelNumbers.Five,
+  [WheelNumbers.Ten]: WheelNumbers.Ten,
+  [WheelNumbers.Twenty]: WheelNumbers.Twenty
+}
 
-const rustWheel = pipe(
-  strategy,
-  O.map(RR.toReadonlyArray),
-  O.map(RA.map(flow(T.snd, Bet.toProbability))),
-  O.chain(DD.fromArray)
-)
+const POPULATION_SIZE = 1000
+const NUMBER_OF_GENERATIONS = 100
+const NUMBER_OF_OFFSPRING = 4
+const DEATHS_PER_GENERATION = 750
 
-const spin = pipe(
-  rustWheel,
-  IOE.fromOption(() => 'Invalid probability'),
-  IOE.chain(flow(DD.fold, (a) => IOE.fromIO(a)))
-)
+const MUTATION_SCALE_FACTOR = 1.001
 
-const spinTimes: (times: number) => IOE.IOEither<string, ReadonlyArray<WheelNumbers>> = (
-  times
-) =>
-  pipe(
-    RA.makeBy(times, () => spin),
-    IOE.sequenceArray
-  )
+const ODDS_OF_MUTATION = Fr.fraction(1)(10000)
 
-const getPrioriStats = S.getPrioriStatistics(NUMBER_OF_SPINS)
+const strategy = {
+  [WheelNumbers.One]: Bet.bet(WheelNumbers.One, 2, 12, 25),
+  [WheelNumbers.Three]: Bet.bet(WheelNumbers.Three, 4, 6, 25),
+  [WheelNumbers.Five]: Bet.bet(WheelNumbers.Five, 6, 4, 25),
+  [WheelNumbers.Ten]: Bet.bet(WheelNumbers.Ten, 12, 2, 25),
+  [WheelNumbers.Twenty]: Bet.bet(WheelNumbers.Twenty, 25, 1, 25)
+}
 
-const main = pipe(
+const main: IO.IO<string> = pipe(
   IOE.Do,
-  IOE.bind('strategy', () =>
+  IOE.bind('pMut', () =>
     pipe(
-      strategy,
-      IOE.fromOption(() => 'Invalid probability')
+      ODDS_OF_MUTATION,
+      P.fromFraction('odds of mutation'),
+      IOE.fromOption(() => 'invalid odds of mutation')
     )
   ),
-  IOE.bind('spins', () => spinTimes(NUMBER_OF_SPINS)),
-  IOE.bind('prioriStats', ({ strategy }) => IOE.right(getPrioriStats(strategy))),
-  IOE.map(({ spins, strategy, prioriStats: [expectedValue, variance] }) =>
+  IOE.bind('mate', ({ pMut }) =>
     pipe(
-      spins,
-      RA.reduce(STARTING_TOTAL, S.calculateGains(strategy)),
-      (total) =>
-        `Number of spins: ${NUMBER_OF_SPINS}
-Starting money: ${STARTING_TOTAL}
-Priori winnings expectation: ${expectedValue}
-Priori winnings variance: ${variance}
-Total winnings: ${total}`
+      I.getSemigroup(wheelNumbers, pMut, () => Math.random() * MUTATION_SCALE_FACTOR + 1),
+      (a) => IOE.right(a)
+    )
+  ),
+  IOE.bind('firstGeneration', () =>
+    pipe(
+      strategy,
+      Pop.makeGeneration([0, 10], POPULATION_SIZE),
+      IOE.fromOption(() => 'Invalid first population')
+    )
+  ),
+  IOE.bind('evolve', ({ mate }) =>
+    pipe(Pop.getEvolve(DEATHS_PER_GENERATION, mate, NUMBER_OF_OFFSPRING), (a) =>
+      IOE.right(a)
+    )
+  ),
+  IOE.bind('generations', () =>
+    pipe(RA.makeBy(NUMBER_OF_GENERATIONS, identity), (a) => IOE.right(a))
+  ),
+  IOE.map(({ evolve, firstGeneration, generations }) =>
+    pipe(generations, RA.reduce(firstGeneration, evolve))
+  ),
+  IOE.chain((genX) =>
+    pipe(
+      genX,
+      RNEA.fromReadonlyArray,
+      O.map(RNEA.max(I.getOrd<WheelNumbers>())),
+      IOE.fromOption(() => 'Population died out :-(')
+    )
+  ),
+  IOE.fold(flow(identity, IO.of), ({ fitness, entity }) =>
+    IO.of(
+      `fitness: ${fitness}; bets: ${RR.getShow<Bet.Bet<WheelNumbers>>(
+        Bet.getShow<WheelNumbers>()
+      ).show(entity)}`
     )
   )
 )
