@@ -33,9 +33,11 @@ const NUMBER_OF_GENERATIONS = 100
 const NUMBER_OF_OFFSPRING = 4
 const DEATHS_PER_GENERATION = 750
 
-const MUTATION_SCALE_FACTOR = 1.001
+const MUTATION_SCALE_FACTOR = 1.5
 
-const ODDS_OF_MUTATION = Fr.fraction(1)(10000)
+const ODDS_OF_MUTATION = Fr.fraction(1)(10)
+
+const boundsOfStake: [number, number] = [0, 1]
 
 const strategy = {
   [WheelNumbers.One]: Bet.bet(WheelNumbers.One, 2, 12, 25),
@@ -56,14 +58,19 @@ const main: IO.IO<string> = pipe(
   ),
   IOE.bind('mate', ({ pMut }) =>
     pipe(
-      I.getSemigroup(wheelNumbers, pMut, () => Math.random() * MUTATION_SCALE_FACTOR + 1),
+      I.getSemigroup(
+        wheelNumbers,
+        pMut,
+        () => Math.random() * MUTATION_SCALE_FACTOR + 1,
+        (num) => Math.min(num, 1)
+      ),
       (a) => IOE.right(a)
     )
   ),
   IOE.bind('firstGeneration', () =>
     pipe(
       strategy,
-      Pop.makeGeneration([0, 10], POPULATION_SIZE),
+      Pop.makeGeneration(boundsOfStake, POPULATION_SIZE),
       IOE.fromOption(() => 'Invalid first population')
     )
   ),

@@ -3,7 +3,7 @@
     "baseUrl": "src",
     "noEmit": true,
     "outDir": "./dist/lib",
-    "target": "es5",
+    "target": "ES2015",
     "module": "commonjs",
     "moduleResolution": "node",
     "esModuleInterop": true,

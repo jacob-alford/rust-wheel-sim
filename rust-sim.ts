@@ -12,7 +12,7 @@ import * as DD from './src/DiscreteDistribution'
 const STARTING_TOTAL = 0
 const NUMBER_OF_SPINS = 1
 
-const BET_ON_ONE = 10
+const BET_ON_ONE = 1
 const BET_ON_THREE = 0
 const BET_ON_FIVE = 0
 const BET_ON_TEN = 0

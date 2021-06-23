@@ -6,7 +6,7 @@ import * as N from 'fp-ts/number'
 import * as R from 'fp-ts/Random'
 import * as O from 'fp-ts/Option'
 import { fst } from 'fp-ts/Tuple'
-import { constant, Endomorphism, flow, pipe } from 'fp-ts/function'
+import { constant, Endomorphism, flow, identity, pipe } from 'fp-ts/function'
 
 import * as Bet from 'Bet'
 import * as S from 'Strategy'
@@ -39,7 +39,7 @@ export const initializeIndividual: (
   cons: RR.ReadonlyRecord<Keys, (stake: number) => O.Option<Bet.Bet<Keys>>>
 ) => O.Option<Individual<Keys>> = ([stakeLow, stakeHigh]) =>
   flow(
-    RR.map((makeBet) => pipe(R.randomInt(stakeLow, stakeHigh), IO.map(makeBet))()),
+    RR.map((makeBet) => pipe(R.randomRange(stakeLow, stakeHigh), IO.map(makeBet))()),
     RR.sequence(O.Applicative),
     O.map(fromStrategy)
   )
@@ -61,8 +61,14 @@ const randomMutation: (
 export const getSemigroup: <Keys extends string>(
   keys: RR.ReadonlyRecord<Keys, Keys>,
   oddsOfMutation: P.Probability<unknown>,
-  scaleFactor: IO.IO<number>
-) => Semigroup<Individual<Keys>> = (keys, oddsOfMutation, scaleFactor) => ({
+  scaleFactor: IO.IO<number>,
+  activationFunction?: Endomorphism<number>
+) => Semigroup<Individual<Keys>> = (
+  keys,
+  oddsOfMutation,
+  scaleFactor,
+  activationFunction = identity
+) => ({
   concat: (x, y) => {
     const stakeRatio = x.fitness / y.fitness
     const stakeRatioI = 1 - stakeRatio
@@ -79,6 +85,7 @@ export const getSemigroup: <Keys extends string>(
             pipe(
               bX.stake * stakeRatio + bY.stake * stakeRatioI,
               randomMutation(oddsOfMutation, scaleFactor()),
+              activationFunction,
               constant
             )
           )
